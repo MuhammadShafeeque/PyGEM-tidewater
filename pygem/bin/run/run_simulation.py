@@ -63,6 +63,10 @@ cfg.PARAMS['hydro_month_nh'] = 1
 cfg.PARAMS['hydro_month_sh'] = 1
 cfg.PARAMS['trapezoid_lambdas'] = 1
 
+# Optional calving law hook: if set, `calving_law_for(gdir, option_dynamics)` is called for each tidewater glacier
+# and returns the `calving_law` passed to its dynamical model, or None to keep the default k-calving law
+calving_law_for = None
+
 
 # ----- FUNCTIONS -----
 def none_or_value(value):
@@ -972,6 +976,13 @@ def run(list_packed_vars):
                         option_areaconstant=False,
                     )
 
+                    # Calving law (default k-calving law unless the hook provides one)
+                    calving_kwargs = {}
+                    if gdir.is_tidewater and calving_law_for is not None:
+                        calving_law = calving_law_for(gdir, args.option_dynamics)
+                        if calving_law is not None:
+                            calving_kwargs['calving_law'] = calving_law
+
                     ######################################
                     ### OGGM dynamical evolution model ###
                     ######################################
@@ -989,6 +1000,7 @@ def run(list_packed_vars):
                                 fs=fs,
                                 is_tidewater=gdir.is_tidewater,
                                 water_level=water_level,
+                                **calving_kwargs,
                             )
                         # SemiImplicitModel is newer numerical solver, but does not yet include frontal ablation
                         else:
@@ -1072,6 +1084,7 @@ def run(list_packed_vars):
                             is_tidewater=gdir.is_tidewater,
                             # water_level=gdir.get_diagnostics().get('calving_water_level', None)
                             water_level=water_level,
+                            **calving_kwargs,
                         )
 
                         if debug:

@@ -45,6 +45,7 @@ class MassRedistributionCurveModel(FlowlineModel):
         is_tidewater=False,
         water_level=0,
         #                 calving_k=0,
+        calving_law=None,
         inplace=False,
         debug=True,
         option_areaconstant=False,
@@ -67,6 +68,11 @@ class MassRedistributionCurveModel(FlowlineModel):
             time by the model (can help to spare memory)
         is_tidewater: bool, default: False
             use the very basic parameterization for tidewater glaciers
+        calving_law : func, default: None
+            function replacing the k-calving law, called once per year as
+            ``calving_law(model, flowline, last_above_wl, year)`` and returning
+            the frontal ablation of that year (m3 ice). If None, the k-calving
+            law (``calving_k * d * h * w``) is used.
         mb_elev_feedback : str, default: 'annual'
             'never', 'always', 'annual', or 'monthly': how often the
             mass-balance should be recomputed from the mass balance model.
@@ -101,6 +107,7 @@ class MassRedistributionCurveModel(FlowlineModel):
         if self.is_tidewater:
             self.calving_k = cfg.PARAMS['calving_k']
         self.calving_m3_since_y0 = 0.0  # total calving since time y0
+        self.calving_law = calving_law
 
         assert len(flowlines) == 1, 'MassRedistributionCurveModel is not set up for multiple flowlines'
 
@@ -543,7 +550,10 @@ class MassRedistributionCurveModel(FlowlineModel):
                     h = fl.thick[last_above_wl]
                     d = h - (fl.surface_h[last_above_wl] - self.water_level)
                     k = self.calving_k
-                    q_calving = k * d * h * fl.widths_m[last_above_wl]
+                    if self.calving_law is None:
+                        q_calving = k * d * h * fl.widths_m[last_above_wl]
+                    else:
+                        q_calving = self.calving_law(self, fl, last_above_wl, year)
 
                     # Max frontal ablation is removing all bins with bed below water level
                     glac_idx_bsl = np.where((fl.thick > 0) & (fl.bed_h < self.water_level))[0]
