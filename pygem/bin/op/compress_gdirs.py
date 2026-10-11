@@ -16,6 +16,7 @@ from oggm import utils, workflow
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -48,6 +49,7 @@ def compress_region(region):
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'compress_gdirs')
     parser = argparse.ArgumentParser(description='Script to compress and store OGGM glacier directories')
     # add arguments
     parser.add_argument(

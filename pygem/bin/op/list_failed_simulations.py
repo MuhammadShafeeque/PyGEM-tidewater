@@ -19,6 +19,7 @@ import numpy as np
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -91,6 +92,7 @@ def run(
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'list_failed_simulations')
     # Set up CLI
     parser = argparse.ArgumentParser(
         description="""description: script to check for failed PyGEM glacier simulations\n\nexample call: $python list_failed_simulations.py -rgi_region01=1 -sim_climate_name=CanESM5 -scenrio=ssp585 -outdir=/path/to/output/failed/glaciers/""",

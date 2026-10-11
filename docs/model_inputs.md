@@ -24,7 +24,17 @@ A sample of all relevant data to perform a test run of the model is provided [he
 
 (input_glacier_inventory_target)=
 ## Glacier Inventory
-The current model structure of defining the glaciers uses the Randolph Glacier Inventory version 6.0 (RGI Consortium 2017), but theoretically any glacier inventory that uses the same format and provides the same information (e.g., RGIId, Area, Terminus Type, Median elevation) would be applicable. The glacier inventory is formatted as a .csv file. The latest version of the RGI can be downloaded [here](https://www.glims.org/RGI/).
+The current model structure of defining the glaciers uses the Randolph Glacier Inventory version 6.0 (RGI Consortium 2017), but theoretically any glacier inventory that uses the same format and provides the same information (e.g., RGIId, Area, Terminus Type, Median elevation) would be applicable. The glacier inventory is formatted as a .csv file. The latest version of the RGI can be downloaded [here](https://www.glims.org/RGI/). RGI 7.0 can be used instead, see [RGI 7.0](input_rgi7_target).
+
+(input_rgi7_target)=
+### RGI 7.0
+PyGEM runs on RGI 7.0 glaciers (product G, ids such as `RGI2000-v7.0-G-05-09345`) when `rgi.rgi_version` is `'70G'` in *~/PyGEM/config.yaml*. The default `'62'` keeps RGI 6.2, and a configuration file without the key reads as `'62'`. With RGI 7.0:
+* `rgi.rgi_relpath` points to the RGI 7.0 regional attribute tables as distributed (`RGI2000-v7.0-G-<region>_<name>-attributes.csv`). PyGEM renames their columns to the RGI 6.0 names it uses (e.g., `area_km2` to `Area`, `term_type` to `TermType`) and maps terminus type 3 (shelf-terminating in RGI 7.0) to 5, its RGI 6.0 code.
+* `oggm.base_url` points to OGGM's RGI 7.0 glacier directories, e.g. `https://cluster.klima.uni-bremen.de/~oggm/gdirs/oggm_v1.6/L1-L2_files/2025.6/elev_bands/`.
+* Glacier numbers keep their RGI 7.0 form, e.g. `run_simulation -rgi_glac_number 05-09345`, and so do file names (`05-09345-modelprms_dict.json`); output directories are per region as with RGI 6.2.
+* Inputs are read under the glacier's own RGI 7.0 id first. An input that exists only per RGI 6.0 id is read through the RGI 7.0 to RGI 6.0 links table set in `rgi.rgi7_rgi6_links_relpath`, and only when the link is one to one (`n_rgi6` and `n_rgi7` both 1); otherwise a warning is logged and that input is not read. This applies to the geodetic mass balance, the calibrated frontal ablation (`calving_k`), the consensus ice thickness, debris thickness and enhancement factors, and the 1-d elevation change, melt extent and snowline data. Inputs per region (Glen A, priors) need no link. OGGM serves an RGI 7.0 version of the Hugonnet et al. (2021) data (`hugonnet_2021_ds_rgi70G_pergla_rates_10_20_worldwide_filled.parquet`), so the mass balance needs no link.
+* The links tables published with RGI 7.0 miss most overlaps ([RGI issue 41](https://github.com/GLIMS-RGI/rgi_issue_tracker/issues/41)); until RGI 7.1, use the corrected tables linked from that issue.
+* Glacier complexes (product C) are not supported. *run_calibration_frontalablation*, *run_inversion*, *postproc_compile_simulations*, *list_failed_simulations*, *compress_gdirs*, *duplicate_gdirs*, *preproc_fetch_mbdata* and *preproc_wgms_estimate_kp* read data or a file layout that exist for RGI 6.2 only and stop with an error under RGI 7.0.
 
 (input_glacier_data_target)=
 ## Glacier Data

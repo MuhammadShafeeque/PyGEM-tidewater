@@ -343,7 +343,7 @@ def run(reg, option_calibration='emulator', priors_reg_outpath='', debug=False, 
     main_glac_rgi['ddfsnow_em'] = np.nan
     main_glac_rgi['mb_mwea_em'] = np.nan
     for nglac, rgino_str in enumerate(list(main_glac_rgi.rgino_str.values)):
-        glac_str = str(int(rgino_str.split('.')[0])) + '.' + rgino_str.split('.')[1]
+        glac_str = main_glac_rgi.loc[nglac, 'glacno']
 
         # Load model parameters
         modelprms_fn = glac_str + '-modelprms_dict.json'

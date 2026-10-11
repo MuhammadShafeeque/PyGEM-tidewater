@@ -25,6 +25,7 @@ from scipy.stats import median_abs_deviation
 # pygem imports
 from pygem import class_climate
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -341,6 +342,7 @@ def est_kp(wgms_ee_winter_fp_subset='', wgms_ee_winter_fp_kp='', wgms_reg_kp_sta
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'preproc_wgms_estimate_kp')
     parser = argparse.ArgumentParser(description='estimate precipitation factors from WGMS winter mass balance data')
     parser.add_argument('-o', '--overwrite', action='store_true', help='Flag to overwrite existing data')
     args = parser.parse_args()

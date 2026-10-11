@@ -36,6 +36,7 @@ from pygem.oggm_compat import (
     single_flowline_glacier_directory,
     single_flowline_glacier_directory_with_calving,
 )
+from pygem.utils._funcs_rgi import glacier_str_from_table
 
 
 def getparser():
@@ -124,7 +125,7 @@ def run(simpath, debug=False):
         f_suffix = '_'.join(pygem_fn_split[1:])[:-3]
         glac_no = pygem_fn_split[0]
         glacier_rgi_table = modelsetup.selectglaciersrgitable(glac_no=[glac_no]).loc[0, :]
-        glacier_str = '{0:0.5f}'.format(glacier_rgi_table['RGIId_float'])
+        glacier_str = glacier_str_from_table(glacier_rgi_table)
         # ===== Load glacier data: area (km2), ice thickness (m), width (km) =====
         try:
             if glacier_rgi_table['TermType'] not in [1, 5] or not pygem_prms['setup']['include_tidewater']:

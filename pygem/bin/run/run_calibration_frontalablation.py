@@ -40,6 +40,7 @@ from pygem.glacierdynamics import MassRedistributionCurveModel
 from pygem.massbalance import PyGEMMassBalance
 from pygem.oggm_compat import single_flowline_glacier_directory_with_calving
 from pygem.shop import debris
+from pygem.utils._funcs_rgi import require_rgi6
 
 ###############
 ### globals ###
@@ -2673,6 +2674,7 @@ def plot_calving_k_allregions(output_fp=''):
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'run_calibration_frontalablation')
     parser = argparse.ArgumentParser(
         description='Calibrate frontal ablation against reference calving datasets and update the reference mass balance data accordingly'
     )

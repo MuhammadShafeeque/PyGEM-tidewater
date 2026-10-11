@@ -14,6 +14,7 @@ import shutil
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -22,6 +23,7 @@ pygem_prms = config_manager.read_config()
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'duplicate_gdirs')
     parser = argparse.ArgumentParser(
         description='Script to make duplicate oggm glacier directories - primarily to avoid corruption if parellelizing runs on a single glacier'
     )

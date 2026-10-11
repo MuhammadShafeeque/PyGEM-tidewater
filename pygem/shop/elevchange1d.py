@@ -23,6 +23,7 @@ from scipy.stats import binned_statistic
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import input_rgiids, rgi6_links_fp, rgino_str
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -133,7 +134,10 @@ def dh_1d_to_gdir(
         If False, interpret as absolute elevation values (in meters).
     """
     # get dataset file path
-    elev_change_1d_fp = f'{dh_datadir}/{gdir.rgi_id.split("-")[1]}_elev_change_1d{infile_suffix}'
+    for rgi_id in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)):
+        elev_change_1d_fp = f'{dh_datadir}/{rgino_str(rgi_id)}_elev_change_1d{infile_suffix}'
+        if os.path.exists(elev_change_1d_fp + '.json') or os.path.exists(elev_change_1d_fp + '.csv'):
+            break
 
     # Check for both .json and .csv extensions
     if os.path.exists(elev_change_1d_fp + '.json'):

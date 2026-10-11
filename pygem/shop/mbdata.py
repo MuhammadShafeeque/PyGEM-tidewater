@@ -21,6 +21,7 @@ from oggm.utils import entity_task
 # pygem imports
 from pygem.setup.config import ConfigManager
 from pygem.utils._funcs import parse_period
+from pygem.utils._funcs_rgi import input_rgiids, rgi6_links_fp
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -74,10 +75,11 @@ def mb_df_to_gdir(
     # read reference mass balance dataset and pull data of interest
     mb_df = pd.read_csv(mbdata_fp)
     mb_df_rgiids = list(mb_df[rgiid_cn])
+    rgi_id = next((x for x in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)) if x in mb_df_rgiids), None)
 
-    if gdir.rgi_id in mb_df_rgiids:
+    if rgi_id is not None:
         # RGIId index
-        rgiid_idx = np.where(gdir.rgi_id == mb_df[rgiid_cn])[0][0]
+        rgiid_idx = np.where(rgi_id == mb_df[rgiid_cn])[0][0]
 
         # Glacier-wide mass balance
         mb_mwea = mb_df.loc[rgiid_idx, mb_cn]

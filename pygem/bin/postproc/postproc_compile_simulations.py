@@ -24,6 +24,7 @@ import pygem
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -524,6 +525,7 @@ def run(args):
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'postproc_compile_simulations')
     start = time.time()
 
     # Set up CLI

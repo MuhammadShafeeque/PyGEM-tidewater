@@ -32,6 +32,14 @@ from pygem.oggm_compat import (
 )
 from pygem.shop import debris
 from pygem.utils._funcs import interp1d_fill_gaps, str2bool
+from pygem.utils._funcs_rgi import (
+    format_glac_no,
+    glacier_str_from_table,
+    input_rgiids,
+    region_str,
+    rgi6_links_fp,
+    rgiid_region,
+)
 
 
 def calc_thick_change_1d(gdir):
@@ -260,7 +268,7 @@ def run(glacno_list, mb_model_params, optimize=False, periods2try=[20], outdir=N
     for i, glac_no in enumerate(glacno_list):
         try:
             glacier_rgi_table = main_glac_rgi.loc[main_glac_rgi.index.values[i], :]
-            glacier_str = '{0:0.5f}'.format(glacier_rgi_table['RGIId_float'])
+            glacier_str = glacier_str_from_table(glacier_rgi_table)
             # instantiate glacier directory
             if glacier_rgi_table['TermType'] not in [1, 5] or not pygem_prms['setup']['include_frontalablation']:
                 gd = single_flowline_glacier_directory(glacier_str, reset=False)
@@ -280,14 +288,18 @@ def run(glacno_list, mb_model_params, optimize=False, periods2try=[20], outdir=N
                     calving_df = pd.read_csv(fp)
                     calving_rgiids = list(calving_df.RGIId)
 
+                    calving_id = next(
+                        (x for x in input_rgiids(gd.rgi_id, rgi6_links_fp(pygem_prms)) if x in calving_rgiids), None
+                    )
+
                     # Use calibrated value if individual data available
-                    if gd.rgi_id in calving_rgiids:
-                        calving_idx = calving_rgiids.index(gd.rgi_id)
+                    if calving_id is not None:
+                        calving_idx = calving_rgiids.index(calving_id)
                         calving_k = calving_df.loc[calving_idx, 'calving_k']
                     # Otherwise, use region's median value
                     else:
-                        calving_df['O1Region'] = [int(x.split('-')[1].split('.')[0]) for x in calving_df.RGIId.values]
-                        calving_df_reg = calving_df.loc[calving_df['O1Region'] == int(gd.rgi_id[6:8]), :]
+                        calving_df['O1Region'] = [rgiid_region(x) for x in calving_df.RGIId.values]
+                        calving_df_reg = calving_df.loc[calving_df['O1Region'] == rgiid_region(gd.rgi_id), :]
                         calving_k = np.median(calving_df_reg.calving_k)
 
                     # set calving_k
@@ -352,7 +364,7 @@ def run(glacno_list, mb_model_params, optimize=False, periods2try=[20], outdir=N
                 # get modelprms from emulator mass balance calibration
                 modelprms_fn = glacier_str + '-modelprms_dict.json'
                 modelprms_fp = (
-                    pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+                    pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
                 ) + modelprms_fn
                 with open(modelprms_fp, 'r') as f:
                     modelprms_dict = json.load(f)
@@ -592,7 +604,7 @@ def main():
     parser.add_argument(
         '-rgi_glac_number',
         action='store',
-        type=float,
+        type=str,
         default=pygem_prms['setup']['glac_no'],
         nargs='+',
         help='Randoph Glacier Inventory glacier number (can take multiple)',
@@ -667,8 +679,7 @@ def main():
     if args.rgi_glac_number:
         glac_no = args.rgi_glac_number
         # format appropriately
-        glac_no = [float(g) for g in glac_no]
-        glac_no = [f'{g:.5f}' if g >= 10 else f'0{g:.5f}' for g in glac_no]
+        glac_no = [format_glac_no(g, pygem_prms['rgi']['rgi_version']) for g in glac_no]
     elif args.rgi_glac_number_fn is not None:
         with open(args.rgi_glac_number_fn, 'r') as f:
             glac_no = json.load(f)

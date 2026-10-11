@@ -27,6 +27,7 @@ from scipy.stats import median_abs_deviation
 
 import pygem
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import glacier_str_from_table
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -110,7 +111,7 @@ class single_glacier:
         """
         self.pygem_version = pygem.__version__
         self.glac_values = np.array([self.glacier_rgi_table.name])
-        self.glacier_str = '{0:0.5f}'.format(self.glacier_rgi_table['RGIId_float'])
+        self.glacier_str = glacier_str_from_table(self.glacier_rgi_table)
         self.reg_str = str(self.glacier_rgi_table.O1Region).zfill(2)
         self.outdir = pygem_prms['root'] + '/Output/simulations/'
         self.set_fn()

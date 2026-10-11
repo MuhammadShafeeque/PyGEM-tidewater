@@ -19,6 +19,14 @@ import numpy as np
 import pandas as pd
 
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import (
+    check_rgi_version,
+    rgi7_table_to_rgi6_columns,
+    rgi_region_csv,
+    rgiid_from_glac_no,
+    rgino_str,
+    split_glac_no,
+)
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -270,6 +278,7 @@ def selectglaciersrgitable(
     rgi_regionsO2='all',
     rgi_glac_number='all',
     rgi_fp=pygem_prms['root'] + pygem_prms['rgi']['rgi_relpath'],
+    rgi_version=pygem_prms['rgi']['rgi_version'],
     rgi_cols_drop=pygem_prms['rgi']['rgi_cols_drop'],
     rgi_O1Id_colname=pygem_prms['rgi']['rgi_O1Id_colname'],
     rgi_glacno_float_colname=pygem_prms['rgi']['rgi_glacno_float_colname'],
@@ -286,29 +295,31 @@ def selectglaciersrgitable(
     glacier inventory. This function returns the rgi table associated with all of these glaciers.
 
     glac_no : list of strings
-        list of strings of RGI glacier numbers (e.g., ['1.00001', '13.00001'])
+        list of strings of RGI glacier numbers (e.g., ['1.00001', '13.00001'], or ['05-09345'] for RGI 7.0)
     rgi_regionsO1 : list of integers
         list of integers of RGI order 1 regions (e.g., [1, 13])
     rgi_regionsO2 : list of integers or 'all'
         list of integers of RGI order 2 regions or simply 'all' for all the order 2 regions
     rgi_glac_number : list of strings
         list of RGI glacier numbers without the region (e.g., ['00001', '00002'])
+    rgi_version : str
+        '62' (RGI 6.2) or '70G' (RGI 7.0 glaciers)
 
     Output: Pandas DataFrame of the glacier statistics for each glacier in the model run
     (rows = GlacNo, columns = glacier statistics)
     """
     doc_url = 'https://pygem.readthedocs.io/en/latest/model_inputs.html#model-inputs'
     doc_meessage = 'Has the full dataset been downloaded? See documentation for more information:'
+    rgi7 = check_rgi_version(rgi_version) == '70G'
     if glac_no is not None:
         glac_no_byregion = {}
-        rgi_regionsO1 = [int(i.split('.')[0]) for i in glac_no]
+        rgi_regionsO1 = [split_glac_no(i)[0] for i in glac_no]
         rgi_regionsO1 = list(set(rgi_regionsO1))
         for region in rgi_regionsO1:
             glac_no_byregion[region] = []
         for i in glac_no:
-            region = i.split('.')[0]
-            glac_no_only = i.split('.')[1]
-            glac_no_byregion[int(region)].append(glac_no_only)
+            region, glac_no_only = split_glac_no(i)
+            glac_no_byregion[region].append(glac_no_only)
 
         for region in rgi_regionsO1:
             glac_no_byregion[region] = sorted(glac_no_byregion[region])
@@ -320,7 +331,7 @@ def selectglaciersrgitable(
         if glac_no is not None:
             rgi_glac_number = glac_no_byregion[region]
 
-        fp = glob.glob(f'{rgi_fp}/{str(region).zfill(2)}*.csv')
+        fp = glob.glob(rgi_region_csv(rgi_fp, region, rgi_version))
         if len(fp) != 1:
             raise FileNotFoundError(
                 f'No RGI file found for region {region} in {rgi_fp}. {doc_meessage} <a href="{doc_url}">{doc_url}</a>'
@@ -330,6 +341,8 @@ def selectglaciersrgitable(
             csv_regionO1 = pd.read_csv(fp)
         except:
             csv_regionO1 = pd.read_csv(fp, encoding='latin1')
+        if rgi7:
+            csv_regionO1 = rgi7_table_to_rgi6_columns(csv_regionO1)
         # warn if RGI table only has one glacier - maybe the full dataset wasn't downloaded after initialization
         if rgi_glac_number == 'all' and len(csv_regionO1) == 1:
             warnings.warn(
@@ -374,7 +387,8 @@ def selectglaciersrgitable(
                     % (len(rgi_glac_number), region, rgi_glac_number[0:50])
                 )
 
-            rgiid_subset = ['RGI60-' + str(region).zfill(2) + '.' + x for x in rgi_glac_number]
+            sep = '-' if rgi7 else '.'
+            rgiid_subset = [rgiid_from_glac_no(f'{region:02d}{sep}{x}') for x in rgi_glac_number]
             rgiid_all = list(csv_regionO1.RGIId.values)
             rgi_idx = [rgiid_all.index(x) for x in rgiid_subset if x in rgiid_all]
             if glacier_table.empty:
@@ -403,17 +417,25 @@ def selectglaciersrgitable(
         + 9999
     )
     # drop columns of data that is not being used
+    if rgi7:
+        rgi_cols_drop = [x for x in rgi_cols_drop if x in glacier_table.columns]
     glacier_table.drop(rgi_cols_drop, axis=1, inplace=True)
-    # add column with the O1 glacier numbers
-    glacier_table[rgi_O1Id_colname] = glacier_table['RGIId'].str.split('.').apply(pd.Series).loc[:, 1].astype(int)
-    glacier_table['rgino_str'] = [x.split('-')[1] for x in glacier_table.RGIId.values]
-    #    glacier_table[rgi_glacno_float_colname] = (np.array([np.str.split(glacier_table['RGIId'][x],'-')[1]
-    #                                                    for x in range(glacier_table.shape[0])]).astype(float))
-    glacier_table[rgi_glacno_float_colname] = np.array(
-        [x.split('-')[1] for x in glacier_table['RGIId']]
-        #            [np.str.split(glacier_table['RGIId'][x],'-')[1]
-        #                                                    for x in range(glacier_table.shape[0])]
-    ).astype(float)
+    if rgi7:
+        # RGI 7.0 ids keep their own form; there is no float glacier number
+        glacier_table[rgi_O1Id_colname] = [int(x.split('-')[-1]) for x in glacier_table['RGIId']]
+        glacier_table['rgino_str'] = [rgino_str(x) for x in glacier_table['RGIId']]
+        glacier_table[rgi_glacno_float_colname] = np.nan
+    else:
+        # add column with the O1 glacier numbers
+        glacier_table[rgi_O1Id_colname] = glacier_table['RGIId'].str.split('.').apply(pd.Series).loc[:, 1].astype(int)
+        glacier_table['rgino_str'] = [x.split('-')[1] for x in glacier_table.RGIId.values]
+        #    glacier_table[rgi_glacno_float_colname] = (np.array([np.str.split(glacier_table['RGIId'][x],'-')[1]
+        #                                                    for x in range(glacier_table.shape[0])]).astype(float))
+        glacier_table[rgi_glacno_float_colname] = np.array(
+            [x.split('-')[1] for x in glacier_table['RGIId']]
+            #            [np.str.split(glacier_table['RGIId'][x],'-')[1]
+            #                                                    for x in range(glacier_table.shape[0])]
+        ).astype(float)
     # set index name
     glacier_table.index.name = indexname
     # Longitude between 0-360deg (no negative)
@@ -438,9 +460,12 @@ def selectglaciersrgitable(
     glacier_table = glacier_table.loc[glacier_table['TermType'].isin(termtype_values)]
     glacier_table.reset_index(inplace=True, drop=True)
     # Glacier number with no trailing zeros
-    glacier_table['glacno'] = [
-        str(int(x.split('-')[1].split('.')[0])) + '.' + x.split('-')[1].split('.')[1] for x in glacier_table.RGIId
-    ]
+    if rgi7:
+        glacier_table['glacno'] = glacier_table['rgino_str']
+    else:
+        glacier_table['glacno'] = [
+            str(int(x.split('-')[1].split('.')[0])) + '.' + x.split('-')[1].split('.')[1] for x in glacier_table.RGIId
+        ]
 
     # Remove glaciers below threshold
     glacier_table = glacier_table.loc[glacier_table['Area'] > min_glac_area_km2, :]

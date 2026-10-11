@@ -57,6 +57,11 @@ class ConfigManager:
         with open(self.config_path, 'r') as f:
             user_config = ryaml.load(f)
 
+        for key, value in self.DEFAULTS.items():
+            section, name = key.split('.')
+            if isinstance(user_config.get(section), dict) and name not in user_config[section]:
+                user_config[section][name] = value
+
         if validate:
             self._validate_config(user_config)
 
@@ -393,7 +398,9 @@ class ConfigManager:
         'mb.HH2015_rf_opts.rf_dens_bot': (int, float),
         'mb.HH2015_rf_opts.option_rf_limit_meltsnow': int,
         'rgi': dict,
+        'rgi.rgi_version': str,
         'rgi.rgi_relpath': str,
+        'rgi.rgi7_rgi6_links_relpath': (str, type(None)),
         'rgi.rgi_lat_colname': str,
         'rgi.rgi_lon_colname': str,
         'rgi.elev_colname': str,
@@ -423,11 +430,17 @@ class ConfigManager:
         'debug.mb': bool,
     }
 
+    # keys added after v1.1.0, so that a configuration file written before them still reads
+    DEFAULTS = {
+        'rgi.rgi_version': '62',
+        'rgi.rgi7_rgi6_links_relpath': None,
+    }
+
     # expected types of elements in lists
     LIST_ELEMENT_TYPES = {
         'setup.rgi_region01': int,
-        'setup.glac_no_skip': float,
-        'setup.glac_no': float,
+        'setup.glac_no_skip': (float, str),
+        'setup.glac_no': (float, str),
         'calib.HH2015mod_params.params2opt': str,
         'calib.emulator_params.params2opt': str,
         'sim.out.sim_stats': str,

@@ -26,6 +26,7 @@ from pygem.massbalance import PyGEMMassBalance_wrapper
 from pygem.oggm_compat import update_cfg
 from pygem.shop import debris, mbdata
 from pygem.utils._funcs import str2bool
+from pygem.utils._funcs_rgi import require_rgi6
 
 cfg.initialize(logging_level=pygem_prms['oggm']['logging_level'])
 cfg.PATHS['working_dir'] = f'{pygem_prms["root"]}/{pygem_prms["oggm"]["oggm_gdir_relpath"]}'
@@ -382,6 +383,7 @@ def run(
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'run_inversion')
     # define ArgumentParser
     parser = argparse.ArgumentParser(
         description="Perform glacier bed inversion (defaults to finding best Glen's A for each RGI order 01 region)"

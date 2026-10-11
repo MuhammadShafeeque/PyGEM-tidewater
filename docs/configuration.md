@@ -62,7 +62,7 @@ The user information is strictly for bookkeeping purposes. This information is s
 | `setup.rgi_region01` | `list` of `integers` | List of RGI order 01 region numbers to include |
 | `setup.rgi_region02` | `list` of `integers` or `'all'` | List of RGI  order 02 subregion numbers to include, or `'all'` to include all subregions |
 | `setup.glac_no_skip` | `null` or `list` of `strings` | Glacier numbers to skip |
-| `setup.glac_no` | `null` or `list` of `strings` | List of RGI glacier numbers (e.g., `1.00570`) |
+| `setup.glac_no` | `null` or `list` of `strings` | List of RGI glacier numbers (e.g., `1.00570`, or `01-00570` for RGI 7.0) |
 | `setup.min_glac_area_km2` | `float` | Minimum glacier area (km$^{2}$) threshold |
 | `setup.include_landterm` | `boolean` | Include land-terminating glaciers |
 | `setup.include_laketerm` | `boolean` | Include lake-terminating glaciers |
@@ -300,7 +300,9 @@ Set glac_no will always overwrite the rgi regions, so if you want to use the rgi
 
 | Variable | Type | Comment/Note |
 | :--- | :--- | :--- |
+| `rgi.rgi_version` | `string` | `'62'` (RGI 6.2, default) or `'70G'` (RGI 7.0 glaciers), see [RGI 7.0](input_rgi7_target) |
 | `rgi.rgi_relpath` | `string` | Filepath for RGI files (relative to `root`) |
+| `rgi.rgi7_rgi6_links_relpath` | `null` or `string` | RGI 7.0 to RGI 6.0 links file, or directory of regional links files (relative to `root`), used only with `'70G'` |
 | `rgi.rgi_lat_colname` | `string` | Name of latitude column |
 | `rgi.rgi_lon_colname` | `string` | Name of longitude column (360-based) |
 | `rgi.elev_colname` | `string` | Name of elevation column |

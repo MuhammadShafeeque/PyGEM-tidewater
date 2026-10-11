@@ -19,6 +19,7 @@ from oggm.utils import entity_task, ncDataset
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import input_rgiids, rgi6_links_fp, rgiid_region_dir
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -57,7 +58,10 @@ def consensus_gridded(
         where to write the data
     """
     # If binned mb data exists, then write to glacier directory
-    h_fn = h_consensus_fp + 'RGI60-' + gdir.rgi_region + '/' + gdir.rgi_id + '_thickness.tif'
+    for rgi_id in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)):
+        h_fn = h_consensus_fp + rgiid_region_dir(rgi_id) + '/' + rgi_id + '_thickness.tif'
+        if os.path.exists(h_fn):
+            break
     assert os.path.exists(h_fn), 'Error: h_consensus_fullfn for ' + gdir.rgi_id + ' does not exist.'
 
     # open consensus ice thickness estimate

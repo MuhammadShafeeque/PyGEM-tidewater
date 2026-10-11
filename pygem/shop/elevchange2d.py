@@ -37,6 +37,7 @@ from shapely.geometry import box
 
 from pygem.setup.config import ConfigManager
 from pygem.utils._funcs import parse_period
+from pygem.utils._funcs_rgi import glacno
 
 config_manager = ConfigManager()
 # read the config
@@ -124,7 +125,7 @@ def dhdt_to_gdir(
         return
 
     # match files by rgi_id if possible
-    glac_no = '{0:0.5f}'.format(float(gdir.rgi_id.split('-')[1]))
+    glac_no = glacno(gdir.rgi_id)
     flist = [
         f
         for f in tif_files

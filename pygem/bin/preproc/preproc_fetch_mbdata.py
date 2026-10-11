@@ -18,6 +18,7 @@ from oggm import utils
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import require_rgi6
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -70,6 +71,7 @@ def run(fp='', debug=False, overwrite=False):
 
 
 def main():
+    require_rgi6(pygem_prms['rgi']['rgi_version'], 'preproc_fetch_mbdata')
     parser = argparse.ArgumentParser(
         description='grab filled Hugonnet et al. 2021 geodetic mass balance data from OGGM and converts to a format PyGEM utilizes'
     )

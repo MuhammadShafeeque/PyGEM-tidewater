@@ -41,7 +41,7 @@ setup:
 
 # ===== OGGM SETTINGS =====
 oggm:
-  base_url: https://cluster.klima.uni-bremen.de/~oggm/gdirs/oggm_v1.6/L1-L2_files/elev_bands/
+  base_url: https://cluster.klima.uni-bremen.de/~oggm/gdirs/oggm_v1.6/L1-L2_files/elev_bands/  # RGI 7.0: https://cluster.klima.uni-bremen.de/~oggm/gdirs/oggm_v1.6/L1-L2_files/2025.6/elev_bands/
   logging_level: WORKFLOW                         # DEBUG, INFO, WARNING, ERROR, WORKFLOW, CRITICAL (recommended WORKFLOW)
   border: 80                                      # 10, 80, 160, 240 (recommend 240 if expecting glaciers for long runs where glaciers may grow)
   oggm_gdir_relpath: /oggm_gdirs/
@@ -323,8 +323,10 @@ mb:
 
 #  ===== RGI GLACIER DATA =====
 rgi:
+  rgi_version: '62'                               # '62' (RGI 6.2) or '70G' (RGI 7.0 glaciers); rgi_relpath and oggm.base_url must hold the same inventory
   # Filepath for RGI files
   rgi_relpath: /RGI/rgi60/00_rgi60_attribs/
+  rgi7_rgi6_links_relpath: null                   # RGI 7.0 only: RGI 7.0 to RGI 6.0 links file, or directory of regional links files, to read inputs held per RGI 6.0 id
   # Column names
   rgi_lat_colname: CenLat
   rgi_lon_colname: CenLon_360                     # REQUIRED OTHERWISE GLACIERS IN WESTERN HEMISPHERE USE 0 deg

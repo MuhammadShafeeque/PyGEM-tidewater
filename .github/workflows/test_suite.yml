@@ -75,3 +75,4 @@ jobs:
           python3 -m pytest --cov=pygem -v --durations=20 pygem/tests/test_03_notebooks.py
           python3 -m pytest --cov=pygem -v --durations=20 pygem/tests/test_04_auxiliary.py
           python3 -m pytest --cov=pygem -v --durations=20 pygem/tests/test_05_postproc.py
+          python3 -m pytest --cov=pygem -v --durations=20 pygem/tests/test_06_rgi.py

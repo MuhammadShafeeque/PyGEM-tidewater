@@ -20,6 +20,7 @@ from oggm.utils import entity_task
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import input_rgiids, rgi6_links_fp, rgino_str
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -66,11 +67,14 @@ def meltextent_1d_to_gdir(
             'ref_dem_year': Reference DEM year for elevation value of observations (m a.s.l.) (e.g., 2013 if using COP30)
     """
     # get dataset file path
-    meltextent_1d_fp = (
-        f'{pygem_prms["root"]}/'
-        f'{pygem_prms["calib"]["data"]["meltextent_1d"]["meltextent_1d_relpath"]}/'
-        f'{gdir.rgi_id.split("-")[1]}_melt_extent_elev.csv'
-    )
+    for rgi_id in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)):
+        meltextent_1d_fp = (
+            f'{pygem_prms["root"]}/'
+            f'{pygem_prms["calib"]["data"]["meltextent_1d"]["meltextent_1d_relpath"]}/'
+            f'{rgino_str(rgi_id)}_melt_extent_elev.csv'
+        )
+        if os.path.exists(meltextent_1d_fp):
+            break
 
     # check for file
     if os.path.exists(meltextent_1d_fp):
@@ -198,11 +202,14 @@ def snowline_1d_to_gdir(
             'ref_dem_year': Reference DEM year for elevation value of observations (m a.s.l.) (e.g., 2013 if using COP30)
     """
     # get dataset file path
-    snowline_1d_fp = (
-        f'{pygem_prms["root"]}/'
-        f'{pygem_prms["calib"]["data"]["snowline_1d"]["snowline_1d_relpath"]}/'
-        f'{gdir.rgi_id.split("-")[1]}_snowline_elev.csv'
-    )
+    for rgi_id in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)):
+        snowline_1d_fp = (
+            f'{pygem_prms["root"]}/'
+            f'{pygem_prms["calib"]["data"]["snowline_1d"]["snowline_1d_relpath"]}/'
+            f'{rgino_str(rgi_id)}_snowline_elev.csv'
+        )
+        if os.path.exists(snowline_1d_fp):
+            break
 
     # check for file
     if os.path.exists(snowline_1d_fp):

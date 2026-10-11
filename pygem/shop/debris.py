@@ -6,6 +6,7 @@ copyright © 2018 David Rounce <drounce@cmu.edu>
 Distributed under the MIT license
 """
 
+import glob
 import logging
 import os
 import warnings
@@ -19,6 +20,7 @@ from oggm.utils import entity_task, ncDataset
 
 # pygem imports
 from pygem.setup.config import ConfigManager
+from pygem.utils._funcs_rgi import glacno, input_rgiids, rgi6_links_fp, rgiid_region
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -68,10 +70,13 @@ def debris_to_gdir(
 
     assert os.path.exists(debris_dir), 'Error: debris directory does not exist.'
 
-    hd_dir = debris_dir + 'hd_tifs/' + gdir.rgi_region + '/'
-    ed_dir = debris_dir + 'ed_tifs/' + gdir.rgi_region + '/'
+    for rgi_id in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)):
+        hd_dir = debris_dir + 'hd_tifs/' + f'{rgiid_region(rgi_id):02d}' + '/'
+        ed_dir = debris_dir + 'ed_tifs/' + f'{rgiid_region(rgi_id):02d}' + '/'
 
-    glac_str_nolead = str(int(gdir.rgi_region)) + '.' + gdir.rgi_id.split('-')[1].split('.')[1]
+        glac_str_nolead = glacno(rgi_id)
+        if glob.glob(f'{hd_dir}{glac_str_nolead}_*.tif') or glob.glob(f'{ed_dir}{glac_str_nolead}_*.tif'):
+            break
 
     # If debris thickness data exists, then write to glacier directory
     if os.path.exists(hd_dir + glac_str_nolead + '_hdts_m.tif'):

@@ -30,6 +30,7 @@ from pygem.shop import (
     mbdata,
     meltextent_and_snowline_1d,
 )
+from pygem.utils._funcs_rgi import is_rgi7_id, prepro_rgi_version, rgiid_from_glac_no
 
 # instantiate ConfigManager
 config_manager = ConfigManager()
@@ -55,7 +56,7 @@ def single_flowline_glacier_directory(
     Parameters
     ----------
     rgi_id : str
-        the rgi id of the glacier (RGIv60-)
+        the glacier number ('1.00570', or '01-00570' for RGI 7.0)
     reset : bool
         set to true to delete any pre-existing files. If false (the default),
         the directory won't be re-downloaded if already available locally in
@@ -69,8 +70,8 @@ def single_flowline_glacier_directory(
     """
     if type(rgi_id) != str:
         raise ValueError('We expect rgi_id to be a string')
-    if rgi_id.startswith('RGI60-') == False:
-        rgi_id = 'RGI60-' + rgi_id.split('.')[0].zfill(2) + '.' + rgi_id.split('.')[1]
+    if rgi_id.startswith('RGI') == False:
+        rgi_id = rgiid_from_glac_no(rgi_id)
     else:
         raise ValueError('Check RGIId is correct')
 
@@ -115,7 +116,7 @@ def single_flowline_glacier_directory(
             from_prepro_level=2,
             prepro_border=cfg.PARAMS['border'],
             prepro_base_url=base_url,
-            prepro_rgi_version='62',
+            prepro_rgi_version=prepro_rgi_version(rgi_id),
         )[0]
 
     # go through shop tasks to process auxiliary datasets to gdir if necessary
@@ -159,7 +160,7 @@ def single_flowline_glacier_directory_with_calving(
     Parameters
     ----------
     rgi_id : str
-        the rgi id of the glacier
+        the glacier number ('1.00570', or '01-00570' for RGI 7.0)
     reset : bool
         set to true to delete any pre-existing files. If false (the default),
         the directory won't be re-downloaded if already available locally in
@@ -172,8 +173,8 @@ def single_flowline_glacier_directory_with_calving(
     """
     if type(rgi_id) != str:
         raise ValueError('We expect rgi_id to be a string')
-    if rgi_id.startswith('RGI60-') == False:
-        rgi_id = 'RGI60-' + rgi_id.split('.')[0].zfill(2) + '.' + rgi_id.split('.')[1]
+    if rgi_id.startswith('RGI') == False:
+        rgi_id = rgiid_from_glac_no(rgi_id)
     else:
         raise ValueError('Check RGIId is correct')
 
@@ -218,7 +219,7 @@ def single_flowline_glacier_directory_with_calving(
             from_prepro_level=2,
             prepro_border=cfg.PARAMS['border'],
             prepro_base_url=base_url,
-            prepro_rgi_version='62',
+            prepro_rgi_version=prepro_rgi_version(rgi_id),
         )[0]
 
         if not gdir.is_tidewater:
@@ -301,7 +302,7 @@ def create_empty_glacier_directory(rgi_id):
     Parameters
     ----------
     rgi_id : str
-        the rgi id of the glacier (RGIv60-)
+        the rgi id of the glacier (RGI60- or RGI2000-v7.0-G-)
 
     Returns
     -------
@@ -310,7 +311,7 @@ def create_empty_glacier_directory(rgi_id):
     # RGIId check
     if type(rgi_id) != str:
         raise ValueError('We expect rgi_id to be a string')
-    assert rgi_id.startswith('RGI60-'), 'Check RGIId starts with RGI60-'
+    assert rgi_id.startswith('RGI60-') or is_rgi7_id(rgi_id), 'Check RGIId starts with RGI60- or RGI2000-v7.0-G-'
 
     # Create empty directory
     gdir = CompatGlacDir(rgi_id)

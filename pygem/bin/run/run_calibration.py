@@ -51,6 +51,14 @@ from pygem.massbalance import PyGEMMassBalance
 from pygem.plot import graphics
 from pygem.shop import debris
 from pygem.utils._funcs import interp1d_fill_gaps
+from pygem.utils._funcs_rgi import (
+    format_glac_no,
+    glacier_str_from_table,
+    input_rgiids,
+    region_str,
+    rgi6_links_fp,
+    rgiid_region,
+)
 from pygem.utils.stats import mcmc_stats
 
 
@@ -127,7 +135,7 @@ def getparser():
     parser.add_argument(
         '-rgi_glac_number',
         action='store',
-        type=float,
+        type=str,
         default=pygem_prms['setup']['glac_no'],
         nargs='+',
         help='Randoph Glacier Inventory glacier number (can take multiple)',
@@ -724,7 +732,7 @@ def create_emulator(
     # ----- EXPORT EMULATOR -----
     # Save emulator (model state, x_train, y_train, etc.)
     em_mod_fn = glacier_str + '-emulator-' + y_cn + '.pth'
-    em_mod_fp = em_fp + 'models/' + glacier_str.split('.')[0].zfill(2) + '/'
+    em_mod_fp = em_fp + 'models/' + region_str(glacier_str) + '/'
     if not os.path.exists(em_mod_fp):
         os.makedirs(em_mod_fp, exist_ok=True)
     torch.save(model.state_dict(), em_mod_fp + em_mod_fn)
@@ -819,7 +827,7 @@ def run(list_packed_vars):
 
         # Select subsets of data
         glacier_rgi_table = main_glac_rgi.loc[main_glac_rgi.index.values[glac], :]
-        glacier_str = '{0:0.5f}'.format(glacier_rgi_table['RGIId_float'])
+        glacier_str = glacier_str_from_table(glacier_rgi_table)
 
         # ===== Load glacier data: area (km2), ice thickness (m), width (km) =====
         try:
@@ -930,14 +938,17 @@ def run(list_packed_vars):
                     assert os.path.exists(fp), 'Calibrated calving dataset does not exist'
                     calving_df = pd.read_csv(fp)
                     calving_rgiids = list(calving_df.RGIId)
+                    calving_id = next(
+                        (x for x in input_rgiids(gdir.rgi_id, rgi6_links_fp(pygem_prms)) if x in calving_rgiids), None
+                    )
                     # Use calibrated value if individual data available
-                    if gdir.rgi_id in calving_rgiids:
-                        calving_idx = calving_rgiids.index(gdir.rgi_id)
+                    if calving_id is not None:
+                        calving_idx = calving_rgiids.index(calving_id)
                         calving_k = calving_df.loc[calving_idx, 'calving_k']
                     # Otherwise, use region's median value
                     else:
-                        calving_df['O1Region'] = [int(x.split('-')[1].split('.')[0]) for x in calving_df.RGIId.values]
-                        calving_df_reg = calving_df.loc[calving_df['O1Region'] == int(gdir.rgi_id[6:8]), :]
+                        calving_df['O1Region'] = [rgiid_region(x) for x in calving_df.RGIId.values]
+                        calving_df_reg = calving_df.loc[calving_df['O1Region'] == rgiid_region(gdir.rgi_id), :]
                         calving_k = np.median(calving_df_reg.calving_k)
                     # set calving_k
                     cfg.PARAMS['calving_k'] = calving_k
@@ -960,7 +971,7 @@ def run(list_packed_vars):
 
         except Exception as err:
             # LOG FAILURE
-            fail_fp = pygem_prms['root'] + '/Output/cal_fail/' + glacier_str.split('.')[0].zfill(2) + '/'
+            fail_fp = pygem_prms['root'] + '/Output/cal_fail/' + region_str(glacier_str) + '/'
             if not os.path.exists(fail_fp):
                 os.makedirs(fail_fp, exist_ok=True)
             txt_fn_fail = glacier_str + '-cal_fail.txt'
@@ -995,7 +1006,7 @@ def run(list_packed_vars):
             nsims = pygem_prms['calib']['emulator_params']['emulator_sims']
 
             # Load sims df
-            sims_fp = pygem_prms['root'] + '/Output/emulator/sims/' + glacier_str.split('.')[0].zfill(2) + '/'
+            sims_fp = pygem_prms['root'] + '/Output/emulator/sims/' + region_str(glacier_str) + '/'
             sims_fn = glacier_str + '-' + str(nsims) + '_emulator_sims.csv'
 
             if not os.path.exists(sims_fp + sims_fn) or pygem_prms['calib']['emulator_params']['overwrite_em_sims']:
@@ -1299,7 +1310,7 @@ def run(list_packed_vars):
 
             # ----- EMULATOR: Mass balance -----
             em_mod_fn = glacier_str + '-emulator-mb_mwea.pth'
-            em_mod_fp = pygem_prms['root'] + '/Output/emulator/models/' + glacier_str.split('.')[0].zfill(2) + '/'
+            em_mod_fp = pygem_prms['root'] + '/Output/emulator/models/' + region_str(glacier_str) + '/'
             if not os.path.exists(em_mod_fp + em_mod_fn) or pygem_prms['calib']['emulator_params']['overwrite_em_sims']:
                 mbEmulator = create_emulator(glacier_str, sims_df, y_cn='mb_mwea', debug=debug)
             else:
@@ -1559,7 +1570,7 @@ def run(list_packed_vars):
                         + '/Output/errors/'
                         + args.option_calibration
                         + '/'
-                        + glacier_str.split('.')[0].zfill(2)
+                        + region_str(glacier_str)
                         + '/'
                     )
                     if not os.path.exists(troubleshoot_fp):
@@ -1583,7 +1594,7 @@ def run(list_packed_vars):
                         + '/Output/errors/'
                         + args.option_calibration
                         + '/'
-                        + glacier_str.split('.')[0].zfill(2)
+                        + region_str(glacier_str)
                         + '/'
                     )
                     if not os.path.exists(troubleshoot_fp):
@@ -1847,7 +1858,7 @@ def run(list_packed_vars):
                 modelprms['mb_obs_mwea_err'] = [float(mb_obs_mwea_err)]
 
                 modelprms_fn = glacier_str + '-modelprms_dict.json'
-                modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+                modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
                 if not os.path.exists(modelprms_fp):
                     os.makedirs(modelprms_fp, exist_ok=True)
                 modelprms_fullfn = modelprms_fp + modelprms_fn
@@ -2112,7 +2123,7 @@ def run(list_packed_vars):
             if pygem_prms['calib']['MCMC_params']['option_use_emulator'] and not args.option_calib_elev_change_1d:
                 # load emulator
                 em_mod_fn = glacier_str + '-emulator-mb_mwea.pth'
-                em_mod_fp = pygem_prms['root'] + '/Output/emulator/models/' + glacier_str.split('.')[0].zfill(2) + '/'
+                em_mod_fp = pygem_prms['root'] + '/Output/emulator/models/' + region_str(glacier_str) + '/'
                 assert os.path.exists(em_mod_fp + em_mod_fn), (
                     f'emulator output does not exist : {em_mod_fp + em_mod_fn}'
                 )
@@ -2258,7 +2269,7 @@ def run(list_packed_vars):
                             np.round(mb_obs_mwea_err, 3),
                         )
                         # plot chain
-                        fp = pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/fig/'
+                        fp = pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/fig/'
                         fp = os.path.normpath(os.path.join(fp, outsuffix))
                         os.makedirs(fp, exist_ok=True)
                         if ncores > 1:
@@ -2322,7 +2333,7 @@ def run(list_packed_vars):
                 # compute stats on mcmc parameters
                 modelprms_export = mcmc_stats(modelprms_export)
 
-                fp = pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+                fp = pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
                 fp = os.path.normpath(os.path.join(fp, outsuffix))
                 if not os.path.exists(fp):
                     os.makedirs(fp, exist_ok=True)
@@ -2337,7 +2348,7 @@ def run(list_packed_vars):
                     json.dump(modelprms_dict, f)
 
                 # MCMC LOG SUCCESS
-                mcmc_good_fp = pygem_prms['root'] + '/Output/mcmc_success/' + glacier_str.split('.')[0].zfill(2) + '/'
+                mcmc_good_fp = pygem_prms['root'] + '/Output/mcmc_success/' + region_str(glacier_str) + '/'
                 if not os.path.exists(mcmc_good_fp):
                     os.makedirs(mcmc_good_fp, exist_ok=True)
                 txt_fn_good = glacier_str + '-mcmc_success.txt'
@@ -2346,7 +2357,7 @@ def run(list_packed_vars):
 
             except Exception as err:
                 # MCMC LOG FAILURE
-                mcmc_fail_fp = pygem_prms['root'] + '/Output/mcmc_fail/' + glacier_str.split('.')[0].zfill(2) + '/'
+                mcmc_fail_fp = pygem_prms['root'] + '/Output/mcmc_fail/' + region_str(glacier_str) + '/'
                 if not os.path.exists(mcmc_fail_fp):
                     os.makedirs(mcmc_fail_fp, exist_ok=True)
                 txt_fn_fail = glacier_str + '-mcmc_fail.txt'
@@ -2730,7 +2741,7 @@ def run(list_packed_vars):
             modelprms['mb_obs_mwea_err'] = [mb_obs_mwea_err]
 
             modelprms_fn = glacier_str + '-modelprms_dict.json'
-            modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+            modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
             if not os.path.exists(modelprms_fp):
                 os.makedirs(modelprms_fp, exist_ok=True)
             modelprms_fullfn = modelprms_fp + modelprms_fn
@@ -3011,7 +3022,7 @@ def run(list_packed_vars):
             modelprms['mb_obs_mwea_err'] = [mb_obs_mwea_err]
 
             modelprms_fn = glacier_str + '-modelprms_dict.json'
-            modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+            modelprms_fp = pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
             if not os.path.exists(modelprms_fp):
                 os.makedirs(modelprms_fp, exist_ok=True)
             modelprms_fullfn = modelprms_fp + modelprms_fn
@@ -3040,8 +3051,7 @@ def main():
     if args.rgi_glac_number:
         glac_no = args.rgi_glac_number
         # format appropriately
-        glac_no = [float(g) for g in glac_no]
-        glac_no = [f'{g:.5f}' if g >= 10 else f'0{g:.5f}' for g in glac_no]
+        glac_no = [format_glac_no(g, pygem_prms['rgi']['rgi_version']) for g in glac_no]
     elif args.rgi_glac_number_fn is not None:
         with open(args.rgi_glac_number_fn, 'r') as f:
             glac_no = json.load(f)

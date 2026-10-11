@@ -58,6 +58,14 @@ from pygem.output import calc_stats_array
 from pygem.plot import graphics
 from pygem.shop import debris
 from pygem.utils._funcs import str2bool
+from pygem.utils._funcs_rgi import (
+    format_glac_no,
+    glacier_str_from_table,
+    input_rgiids,
+    region_str,
+    rgi6_links_fp,
+    rgiid_region,
+)
 
 cfg.PARAMS['hydro_month_nh'] = 1
 cfg.PARAMS['hydro_month_sh'] = 1
@@ -129,7 +137,7 @@ def getparser():
     parser.add_argument(
         '-rgi_glac_number',
         action='store',
-        type=float,
+        type=str,
         default=pygem_prms['setup']['glac_no'],
         nargs='+',
         help='Randoph Glacier Inventory glacier number (can take multiple)',
@@ -611,7 +619,7 @@ def run(list_packed_vars):
             )
         # Select subsets of data
         glacier_rgi_table = main_glac_rgi.loc[main_glac_rgi.index.values[glac], :]
-        glacier_str = '{0:0.5f}'.format(glacier_rgi_table['RGIId_float'])
+        glacier_str = glacier_str_from_table(glacier_rgi_table)
         reg_str = str(glacier_rgi_table.O1Region).zfill(2)
         rgiid = main_glac_rgi.loc[main_glac_rgi.index.values[glac], 'RGIId']
 
@@ -665,7 +673,7 @@ def run(list_packed_vars):
                     if not modelprms_fp:
                         modelprms_fn = glacier_str + '-modelprms_dict.json'
                         modelprms_fp = (
-                            pygem_prms['root'] + '/Output/calibration/' + glacier_str.split('.')[0].zfill(2) + '/'
+                            pygem_prms['root'] + '/Output/calibration/' + region_str(glacier_str) + '/'
                         ) + modelprms_fn
                     elif os.path.isdir(modelprms_fp):
                         modelprms_fp = modelprms_fp + '/' + glacier_str + '-modelprms_dict.json'
@@ -720,17 +728,18 @@ def run(list_packed_vars):
                         assert os.path.exists(fp), 'Calibrated calving dataset does not exist'
                         calving_df = pd.read_csv(fp)
                         calving_rgiids = list(calving_df.RGIId)
+                        calving_id = next(
+                            (x for x in input_rgiids(rgiid, rgi6_links_fp(pygem_prms)) if x in calving_rgiids), None
+                        )
 
                         # Use calibrated value if individual data available
-                        if rgiid in calving_rgiids:
-                            calving_idx = calving_rgiids.index(rgiid)
+                        if calving_id is not None:
+                            calving_idx = calving_rgiids.index(calving_id)
                             calving_k = calving_df.loc[calving_idx, 'calving_k']
                             calving_k_nmad = calving_df.loc[calving_idx, 'calving_k_nmad']
                         # Otherwise, use region's median value
                         else:
-                            calving_df['O1Region'] = [
-                                int(x.split('-')[1].split('.')[0]) for x in calving_df.RGIId.values
-                            ]
+                            calving_df['O1Region'] = [rgiid_region(x) for x in calving_df.RGIId.values]
                             calving_df_reg = calving_df.loc[calving_df['O1Region'] == int(reg_str), :]
                             calving_k = np.median(calving_df_reg.calving_k)
                             calving_k_nmad = 0
@@ -1746,8 +1755,7 @@ def main():
     if args.rgi_glac_number:
         glac_no = args.rgi_glac_number
         # format appropriately
-        glac_no = [float(g) for g in glac_no]
-        glac_no = [f'{g:.5f}' if g >= 10 else f'0{g:.5f}' for g in glac_no]
+        glac_no = [format_glac_no(g, pygem_prms['rgi']['rgi_version']) for g in glac_no]
     elif args.rgi_glac_number_fn is not None:
         with open(args.rgi_glac_number_fn, 'r') as f:
             glac_no = json.load(f)
